@@ -11,7 +11,7 @@ RUN apk add --no-cache curl tar \
     && apk add --no-cache --virtual .run-deps \
         python3 \
         openssl \
-    && apk update 
+    && apk update apk add git
     
     # Install python/pip
     ENV PYTHONUNBUFFERED=1
