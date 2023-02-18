@@ -1,37 +1,27 @@
 FROM openjdk:8-jdk-alpine
 
-WORKDIR /
+ENV SPARK_VERSION 2.4.0
+ENV HADOOP_VERSION 2.7
 
-RUN apk add --no-cache curl tar \
-    && apk add --no-cache --virtual .build-deps \
-        build-base \
-        python3-dev \
-        libffi-dev \
-        openssl-dev \
-    && apk add --no-cache --virtual .run-deps \
-        python3 \
-        openssl \
-    && apk update && apk add git
-    
-# Install python/pip
-ENV PYTHONUNBUFFERED=1
+# Install python
+RUN apk add --update python python-dev py-pip && \
+    apk add --update build-base && \
+    pip install --upgrade pip && \
+    pip install --upgrade virtualenv && \
+    rm -rf /var/cache/apk/*
 
-RUN apk add --update --no-cache python3 && ln -sf python3 /usr/bin/python
-RUN python3 -m ensurepip
-RUN pip3 install --no-cache --upgrade pip setuptools
+# Set work directory to /app
+WORKDIR /app
 
-RUN curl https://bootstrap.pypa.io/pip/3.6/get-pip.py -o get-pip.py && \
-    python3 get-pip.py && \
-    rm get-pip.py
+# Copy the current directory contents into the container at /app
+COPY . /app
 
-# Install required packages using pip3
-RUN pip3 install cassandra-driver elasticsearch redis flask
+# Download Spark and untar it
+RUN wget https://archive.apache.org/dist/spark/spark-$SPARK_VERSION/spark-$SPARK_VERSION-bin-hadoop$HADOOP_VERSION.tgz && \
+    tar -xzf spark-$SPARK_VERSION-bin-hadoop$HADOOP_VERSION.tgz && \
+    rm spark-$SPARK_VERSION-bin-hadoop$HADOOP_VERSION.tgz && \
+    mv spark-$SPARK_VERSION-bin-hadoop$HADOOP_VERSION /spark && \
+    ln -s /spark/bin/pyspark /usr/bin/pyspark
 
-# Copy the project files into the image
-COPY . .
-
-# Expose port 5000 to the host
-EXPOSE 5000
-
-# Run the application
-CMD ["python3", "main.py"]
+# Start the app
+CMD ["pyspark", "main.py"]
